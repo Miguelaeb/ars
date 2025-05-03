@@ -1,17 +1,30 @@
-"use client"
+"use client";
 
-import type React from "react"
-import type { UserRole } from "@/contexts/auth-context"
+import type React from "react";
+import type { UserRole } from "@/contexts/auth-context";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Search, UserPlus, Shield, UserCog2, UserX2, MoreHorizontal } from "lucide-react"
-import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Search,
+  UserPlus,
+  Shield,
+  UserCog2,
+  UserX2,
+  MoreHorizontal,
+} from "lucide-react";
+import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +32,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { getUsers, deleteUser } from "@/lib/db-service"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "@/components/ui/use-toast"
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/use-toast";
 
 const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
@@ -34,46 +53,48 @@ const roleLabels: Record<UserRole, string> = {
   autorizaciones: "Autorizaciones",
   supervisor: "Supervisor",
   consulta: "Consulta",
-}
+};
 
 const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-800",
   inactive: "bg-gray-100 text-gray-800",
   blocked: "bg-red-100 text-red-800",
-}
+};
 
 const statusLabels: Record<string, string> = {
   active: "Activo",
   inactive: "Inactivo",
   blocked: "Bloqueado",
-}
+};
 
 export default function UsuariosPage() {
-  const { hasPermission, user } = useAuth()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [users, setUsers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { hasPermission, user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        setLoading(true)
-        const fetchedUsers = await getUsers()
-        setUsers(fetchedUsers)
+        setLoading(true);
+        const res = await fetch("/api/usuarios"); // ← ruta de tu API
+        if (!res.ok) throw new Error("Fallo al obtener los usuarios");
+        const data = await res.json();
+        setUsers(data);
       } catch (error) {
-        console.error("Error fetching users:", error)
+        console.error("Error fetching users:", error);
         toast({
           variant: "destructive",
           title: "Error",
           description: "No se pudieron cargar los usuarios",
-        })
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchUsers()
-  }, [])
+    fetchUsers();
+  }, []);
 
   // Filter users based on search term
   const filteredUsers = users.filter(
@@ -81,33 +102,42 @@ export default function UsuariosPage() {
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      roleLabels[user.role as UserRole]?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      roleLabels[user.role as UserRole]
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
+  );
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Search is already handled by the filter above
-  }
+  };
 
   const handleDisableUser = async (userId: string) => {
     if (confirm("¿Está seguro que desea deshabilitar este usuario?")) {
       try {
-        await deleteUser(userId)
+        await fetch(`/api/usuarios/${userId}/delete`, { method: "POST" });
         // Update the user list
-        setUsers(users.map((user) => (user.id === userId ? { ...user, status: "inactive" } : user)))
+        setUsers(
+          users.map((user) =>
+            user.id === userId ? { ...user, status: "inactive" } : user
+          )
+        );
         toast({
           title: "Usuario deshabilitado",
           description: "El usuario ha sido deshabilitado exitosamente",
-        })
+        });
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: error instanceof Error ? error.message : "Error al deshabilitar usuario",
-        })
+          description:
+            error instanceof Error
+              ? error.message
+              : "Error al deshabilitar usuario",
+        });
       }
     }
-  }
+  };
 
   // Check if user has permission to view users
   if (!hasPermission("usuarios", "view")) {
@@ -116,17 +146,20 @@ export default function UsuariosPage() {
         <Alert variant="destructive">
           <AlertTitle>Acceso denegado</AlertTitle>
           <AlertDescription>
-            No tiene permisos para ver la lista de usuarios. Contacte al administrador del sistema.
+            No tiene permisos para ver la lista de usuarios. Contacte al
+            administrador del sistema.
           </AlertDescription>
         </Alert>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Gestión de Usuarios</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Gestión de Usuarios
+        </h1>
         <div className="flex gap-2">
           {hasPermission("usuarios", "create") && (
             <Button asChild>
@@ -146,7 +179,10 @@ export default function UsuariosPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <form onSubmit={handleSearch} className="flex w-full max-w-sm items-center space-x-2">
+            <form
+              onSubmit={handleSearch}
+              className="flex w-full max-w-sm items-center space-x-2"
+            >
               <Input
                 placeholder="Buscar usuario..."
                 value={searchTerm}
@@ -198,7 +234,10 @@ export default function UsuariosPage() {
                     ))
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-6 text-gray-500">
+                      <TableCell
+                        colSpan={5}
+                        className="text-center py-6 text-gray-500"
+                      >
                         No se encontraron usuarios
                       </TableCell>
                     </TableRow>
@@ -219,16 +258,22 @@ export default function UsuariosPage() {
                             </Avatar>
                             <div>
                               <div className="font-medium">{user.name}</div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{roleLabels[user.role as UserRole]}</Badge>
+                          <Badge variant="outline">
+                            {roleLabels[user.role as UserRole]}
+                          </Badge>
                         </TableCell>
                         <TableCell>{user.department}</TableCell>
                         <TableCell>
-                          <Badge className={statusColors[user.status]}>{statusLabels[user.status]}</Badge>
+                          <Badge className={statusColors[user.status]}>
+                            {statusLabels[user.status]}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -257,7 +302,10 @@ export default function UsuariosPage() {
                               {hasPermission("usuarios", "delete") &&
                                 user.id !== "1" && // Prevent disabling admin user
                                 user.id !== (user?.id || "") && ( // Prevent disabling self
-                                  <DropdownMenuItem className="text-red-600" onClick={() => handleDisableUser(user.id)}>
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => handleDisableUser(user.id)}
+                                  >
                                     <UserX2 className="mr-2 h-4 w-4" />
                                     Deshabilitar
                                   </DropdownMenuItem>
@@ -275,5 +323,5 @@ export default function UsuariosPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

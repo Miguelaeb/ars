@@ -1,64 +1,86 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Eye, FileText, Plus, Search } from "lucide-react"
-import { DbService } from "@/lib/db-service"
-import type { Autorizacion, Afiliado } from "@/lib/types"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Eye, FileText, Plus, Search } from "lucide-react";
+import type { Autorizacion, Afiliado } from "@/lib/types";
 
 export default function HistorialAutorizacionesPage() {
-  const [autorizaciones, setAutorizaciones] = useState<Autorizacion[]>([])
-  const [afiliados, setAfiliados] = useState<Afiliado[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos")
-  const [filtroServicio, setFiltroServicio] = useState<string>("todos")
-  const [busqueda, setBusqueda] = useState<string>("")
+  const [autorizaciones, setAutorizaciones] = useState<Autorizacion[]>([]);
+  const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+  const [filtroServicio, setFiltroServicio] = useState<string>("todos");
+  const [busqueda, setBusqueda] = useState<string>("");
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const dbService = DbService.getInstance()
-        const autorizacionesData = await dbService.getAutorizaciones()
-        const afiliadosData = await dbService.getAfiliados()
+        const autorizacionesRes = await fetch("/api/autorizaciones");
+        const autorizacionesData = await autorizacionesRes.json();
 
-        setAutorizaciones(autorizacionesData)
-        setAfiliados(afiliadosData)
+        const afiliadosRes = await fetch("/api/afiliados");
+        const afiliadosData = await afiliadosRes.json();
+
+        setAutorizaciones(autorizacionesData);
+        setAfiliados(afiliadosData);
       } catch (error) {
-        console.error("Error al cargar datos:", error)
+        console.error("Error al cargar datos:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    cargarDatos()
-  }, [])
+    cargarDatos();
+  }, []);
 
   // Función para obtener el nombre del afiliado por ID
   const getNombreAfiliado = (afiliadoId: string): string => {
-    const afiliado = afiliados.find((a) => a.id === afiliadoId)
-    return afiliado ? `${afiliado.nombres} ${afiliado.apellidos}` : "Desconocido"
-  }
+    const afiliado = afiliados.find((a) => a.id === afiliadoId);
+    return afiliado
+      ? `${afiliado.nombres} ${afiliado.apellidos}`
+      : "Desconocido";
+  };
 
   // Función para formatear la fecha
   const formatearFecha = (fechaStr: string): string => {
     try {
-      const fecha = new Date(fechaStr)
+      const fecha = new Date(fechaStr);
       return fecha.toLocaleDateString("es-ES", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      })
+      });
     } catch (e) {
-      return fechaStr
+      return fechaStr;
     }
-  }
+  };
 
   // Función para obtener el nombre del servicio
   const getNombreServicio = (tipoServicio: string): string => {
@@ -70,51 +92,61 @@ export default function HistorialAutorizacionesPage() {
       laboratorio: "Laboratorio",
       imagen: "Estudios de Imagen",
       medicamentos: "Medicamentos",
-    }
+    };
 
-    return servicios[tipoServicio] || tipoServicio
-  }
+    return servicios[tipoServicio] || tipoServicio;
+  };
 
   // Función para obtener el color de la insignia según el estado
   const getBadgeVariant = (estado: string): string => {
     switch (estado) {
       case "aprobada":
-        return "border-green-500 text-green-600 bg-green-50"
+        return "border-green-500 text-green-600 bg-green-50";
       case "rechazada":
-        return "border-red-500 text-red-600 bg-red-50"
+        return "border-red-500 text-red-600 bg-red-50";
       case "pendiente":
       default:
-        return "border-yellow-500 text-yellow-600 bg-yellow-50"
+        return "border-yellow-500 text-yellow-600 bg-yellow-50";
     }
-  }
+  };
 
   // Filtrar autorizaciones
   const autorizacionesFiltradas = autorizaciones.filter((autorizacion) => {
     // Filtro por estado
     if (filtroEstado !== "todos" && autorizacion.estado !== filtroEstado) {
-      return false
+      return false;
     }
 
     // Filtro por tipo de servicio
-    if (filtroServicio !== "todos" && autorizacion.tipoServicio !== filtroServicio) {
-      return false
+    if (
+      filtroServicio !== "todos" &&
+      autorizacion.tipoServicio !== filtroServicio
+    ) {
+      return false;
     }
 
     // Filtro por búsqueda (número de autorización o nombre de afiliado)
     if (busqueda) {
-      const nombreAfiliado = getNombreAfiliado(autorizacion.afiliadoId).toLowerCase()
-      const numeroAutorizacion = autorizacion.numeroAutorizacion.toLowerCase()
+      const nombreAfiliado = getNombreAfiliado(
+        autorizacion.afiliadoId
+      ).toLowerCase();
+      const numeroAutorizacion = autorizacion.numeroAutorizacion.toLowerCase();
 
-      return nombreAfiliado.includes(busqueda.toLowerCase()) || numeroAutorizacion.includes(busqueda.toLowerCase())
+      return (
+        nombreAfiliado.includes(busqueda.toLowerCase()) ||
+        numeroAutorizacion.includes(busqueda.toLowerCase())
+      );
     }
 
-    return true
-  })
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Historial de Autorizaciones</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Historial de Autorizaciones
+        </h1>
         <Button asChild>
           <Link href="/autorizaciones/solicitar">
             <Plus className="mr-2 h-4 w-4" />
@@ -126,7 +158,9 @@ export default function HistorialAutorizacionesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
-          <CardDescription>Filtre las autorizaciones por diferentes criterios</CardDescription>
+          <CardDescription>
+            Filtre las autorizaciones por diferentes criterios
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -167,7 +201,9 @@ export default function HistorialAutorizacionesPage() {
                   <SelectItem value="todos">Todos los servicios</SelectItem>
                   <SelectItem value="consulta">Consulta Médica</SelectItem>
                   <SelectItem value="emergencia">Emergencia</SelectItem>
-                  <SelectItem value="hospitalizacion">Hospitalización</SelectItem>
+                  <SelectItem value="hospitalizacion">
+                    Hospitalización
+                  </SelectItem>
                   <SelectItem value="cirugia">Cirugía</SelectItem>
                   <SelectItem value="laboratorio">Laboratorio</SelectItem>
                   <SelectItem value="imagen">Estudios de Imagen</SelectItem>
@@ -182,7 +218,9 @@ export default function HistorialAutorizacionesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Listado de Autorizaciones</CardTitle>
-          <CardDescription>{autorizacionesFiltradas.length} autorizaciones encontradas</CardDescription>
+          <CardDescription>
+            {autorizacionesFiltradas.length} autorizaciones encontradas
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -213,13 +251,25 @@ export default function HistorialAutorizacionesPage() {
                 <TableBody>
                   {autorizacionesFiltradas.map((autorizacion) => (
                     <TableRow key={autorizacion.id}>
-                      <TableCell className="font-medium">{autorizacion.numeroAutorizacion}</TableCell>
-                      <TableCell>{getNombreAfiliado(autorizacion.afiliadoId)}</TableCell>
-                      <TableCell>{getNombreServicio(autorizacion.tipoServicio)}</TableCell>
-                      <TableCell>{formatearFecha(autorizacion.fechaServicio)}</TableCell>
+                      <TableCell className="font-medium">
+                        {autorizacion.numeroAutorizacion}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={getBadgeVariant(autorizacion.estado)}>
-                          {autorizacion.estado.charAt(0).toUpperCase() + autorizacion.estado.slice(1)}
+                        {getNombreAfiliado(autorizacion.afiliadoId)}
+                      </TableCell>
+                      <TableCell>
+                        {getNombreServicio(autorizacion.tipoServicio)}
+                      </TableCell>
+                      <TableCell>
+                        {formatearFecha(autorizacion.fechaServicio)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={getBadgeVariant(autorizacion.estado)}
+                        >
+                          {autorizacion.estado.charAt(0).toUpperCase() +
+                            autorizacion.estado.slice(1)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -239,5 +289,5 @@ export default function HistorialAutorizacionesPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

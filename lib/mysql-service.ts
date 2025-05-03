@@ -229,7 +229,7 @@ export async function createDependientes(
       await executeQuery<ResultSetHeader>({
         query: `
           INSERT INTO dependientes 
-          (afiliado_id, nombre, apellido, cedula, fecha_nacimiento, genero, parentesco, telefono_contacto)
+          (afiliado_id, nombre, apellido, cedula, fecha_nacimiento, genero, parentesco, telefono)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
         values: [
@@ -249,5 +249,195 @@ export async function createDependientes(
   } catch (error) {
     console.error("Error creating dependientes:", error);
     throw error;
+  }
+}
+
+function generateNumeroAutorizacion(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const random = Math.floor(1000 + Math.random() * 9000); // 4 dígitos aleatorios
+
+  return `AUT-${year}${month}${day}-${random}`;
+}
+
+export async function createAutorizacion(aut: any) {
+  const uuid = crypto.randomUUID(); // ID tipo CHAR(36)
+  const numeroAutorizacion =
+    aut.numeroAutorizacion ?? generateNumeroAutorizacion();
+
+  try {
+    await executeQuery<ResultSetHeader>({
+      query: `
+        INSERT INTO autorizaciones (
+          id,
+          numeroAutorizacion,
+          afiliadoId,
+          tipoServicio,
+          prestador,
+          medicoTratante,
+          fechaServicio,
+          descripcion,
+          montoEstimado,
+          urgencia,
+          porcentajeCobertura,
+          copago,
+          montoMaximo,
+          requiereAutorizacion,
+          estado,
+          comentarios,
+          documentos
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      values: [
+        uuid,
+        numeroAutorizacion, // 🔁 Usar la variable generada, no `aut.numeroAutorizacion`
+        aut.afiliadoId ?? null,
+        aut.tipoServicio ?? null,
+        aut.prestador ?? null,
+        aut.medicoTratante ?? null,
+        aut.fechaServicio ?? null,
+        aut.descripcion ?? null,
+        aut.montoEstimado ?? null,
+        aut.urgencia ?? null,
+        aut.porcentajeCobertura ?? null,
+        aut.copago ?? null,
+        aut.montoMaximo ?? null,
+        aut.requiereAutorizacion !== undefined
+          ? aut.requiereAutorizacion
+            ? 1
+            : 0
+          : null,
+        aut.estado ?? "pendiente",
+        aut.comentarios ?? null,
+        JSON.stringify(aut.documentos ?? []),
+      ],
+    });
+
+    return { ...aut, id: uuid, numeroAutorizacion };
+  } catch (error) {
+    console.error("Error al guardar autorización médica:", error);
+    throw error;
+  }
+}
+
+export async function updateAutorizacionStatus(
+  id: string,
+  estado: "pendiente" | "aprobada" | "rechazada",
+  comentarios: string
+) {
+  try {
+    await executeQuery({
+      query: `
+        UPDATE autorizaciones 
+        SET estado = ?, comentarios = ?
+        WHERE id = ?
+      `,
+      values: [estado, comentarios, id],
+    });
+
+    const [updated] = await executeQuery<RowDataPacket[]>({
+      query: `SELECT * FROM autorizaciones WHERE id = ?`,
+      values: [id],
+    });
+
+    return updated || null;
+  } catch (error) {
+    console.error("Error actualizando autorización:", error);
+    return null;
+  }
+}
+
+export async function createFactura(factura: any) {
+  try {
+    await executeQuery<ResultSetHeader>({
+      query: `
+        INSERT INTO facturas (
+          id,
+          numeroFactura,
+          prestadorId,
+          autorizacionId,
+          fechaEmision,
+          fechaRecepcion,
+          fechaPago,
+          metodoPago,
+          montoTotal,
+          montoPagado,
+          estado,
+          comentarios
+        ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)
+      `,
+      values: [
+        crypto.randomUUID(),
+        factura.numeroFactura,
+        factura.prestadorId,
+        factura.autorizacionId,
+        factura.fechaEmision,
+        factura.fechaRecepcion,
+        factura.montoTotal,
+        factura.montoPagado,
+        factura.estado,
+        factura.comentarios,
+      ],
+    });
+  } catch (error) {
+    console.error("Error creando factura:", error);
+    throw error;
+  }
+}
+
+export async function getAutorizacionById(id: string) {
+  const result = await executeQuery({
+    query: "SELECT * FROM autorizaciones WHERE id = ?",
+    values: [id],
+  });
+
+  return Array.isArray(result) && result.length > 0 ? result[0] : null;
+}
+
+export async function updateFacturaStatus(
+  id: string,
+  estado: string,
+  fechaPago?: string,
+  metodoPago?: string,
+  montoPagado?: number,
+  comentarios?: string
+) {
+  try {
+    await executeQuery({
+      query: `
+        UPDATE facturas 
+        SET estado = ?, fechaPago = ?, metodoPago = ?, montoPagado = ?, comentarios = ?
+        WHERE id = ?
+      `,
+      values: [
+        estado ?? null,
+        fechaPago ?? null,
+        metodoPago ?? null,
+        typeof montoPagado === "number" ? montoPagado : null,
+        comentarios ?? null,
+        id,
+      ],
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error updating factura status:", error);
+    return false;
+  }
+}
+
+export async function getFacturaById(id: string) {
+  try {
+    const results = await executeQuery<RowDataPacket[]>({
+      query: "SELECT * FROM facturas WHERE id = ?",
+      values: [id],
+    });
+
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    console.error(`Error fetching factura with ID ${id}:`, error);
+    return null;
   }
 }

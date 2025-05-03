@@ -1,9 +1,16 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +18,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import {
   CalendarIcon,
   ChevronLeft,
@@ -28,84 +35,99 @@ import {
   Search,
   X,
   Loader2,
-} from "lucide-react"
-import Link from "next/link"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import type { DateRange } from "react-day-picker"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Progress } from "@/components/ui/progress"
-import { DbService } from "@/lib/db-service"
-import type { Factura } from "@/lib/types"
-import { useToast } from "@/hooks/use-toast"
+} from "lucide-react";
+import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import type { Factura } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 // Tipo extendido para facturas con información adicional
 interface FacturaExtendida extends Factura {
   proveedor: {
-    id: string
-    nombre: string
-  }
-  usuario?: string
+    id: string;
+    nombre: string;
+  };
+  usuario?: string;
 }
 
 export default function ListaFacturasPage() {
-  const { toast } = useToast()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEstado, setSelectedEstado] = useState<string | null>(null)
-  const [selectedProveedor, setSelectedProveedor] = useState<string | null>(null)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
-  const [showFilters, setShowFilters] = useState(false)
-  const [exportFormat, setExportFormat] = useState<string | null>(null)
-  const [facturas, setFacturas] = useState<FacturaExtendida[]>([])
-  const [loading, setLoading] = useState(true)
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEstado, setSelectedEstado] = useState<string | null>(null);
+  const [selectedProveedor, setSelectedProveedor] = useState<string | null>(
+    null
+  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
+  const [exportFormat, setExportFormat] = useState<string | null>(null);
+  const [facturas, setFacturas] = useState<FacturaExtendida[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Cargar facturas al montar el componente
   useEffect(() => {
     const cargarFacturas = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const dbService = DbService.getInstance()
-        const facturasData = await dbService.getFacturas()
+        const res = await fetch("/api/facturas");
+        if (!res.ok) throw new Error("Error al cargar facturas");
+        const facturasData = await res.json();
 
-        // Transformar las facturas para incluir información del proveedor
-        const facturasExtendidas: FacturaExtendida[] = facturasData.map((factura) => {
-          // En un sistema real, obtendríamos el nombre del proveedor de otra tabla
-          // Por ahora, usamos el ID como nombre para simplificar
-          return {
+        const facturasExtendidas: FacturaExtendida[] = facturasData.map(
+          (factura: Factura) => ({
             ...factura,
             proveedor: {
               id: factura.prestadorId,
-              nombre: factura.prestadorId, // En un sistema real, esto sería el nombre real
+              nombre: factura.prestadorId,
             },
-            // Convertir el estado de snake_case a formato legible
             estado: formatearEstado(factura.estado),
-          }
-        })
+          })
+        );
 
-        // Ordenar por fecha de creación (más reciente primero)
-        facturasExtendidas.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-        setFacturas(facturasExtendidas)
+        facturasExtendidas.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setFacturas(facturasExtendidas);
       } catch (error) {
-        console.error("Error al cargar facturas:", error)
+        console.error("Error al cargar facturas:", error);
         toast({
           title: "Error",
           description: "No se pudieron cargar las facturas",
           variant: "destructive",
-        })
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    cargarFacturas()
-  }, [toast])
+    cargarFacturas();
+  }, [toast]);
 
   // Función para formatear el estado de la factura
   const formatearEstado = (estado: string): string => {
@@ -115,12 +137,14 @@ export default function ListaFacturasPage() {
       pago_parcial: "Pago Parcial",
       rechazada: "Rechazada",
       en_revision: "En Revisión",
-    }
-    return formatoEstado[estado] || estado
-  }
+    };
+    return formatoEstado[estado] || estado;
+  };
 
   // Obtener proveedores únicos para el filtro
-  const proveedores = [...new Set(facturas.map((factura) => factura.proveedor.nombre))]
+  const proveedores = [
+    ...new Set(facturas.map((factura) => factura.proveedor.nombre)),
+  ];
 
   // Filtrar facturas
   const filteredFacturas = facturas.filter((factura) => {
@@ -128,76 +152,86 @@ export default function ListaFacturasPage() {
       searchTerm === "" ||
       factura.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       factura.numeroFactura.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      factura.proveedor.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      factura.proveedor.nombre.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesEstado = selectedEstado === null || factura.estado === selectedEstado
+    const matchesEstado =
+      selectedEstado === null || factura.estado === selectedEstado;
 
-    const matchesProveedor = selectedProveedor === null || factura.proveedor.nombre === selectedProveedor
+    const matchesProveedor =
+      selectedProveedor === null ||
+      factura.proveedor.nombre === selectedProveedor;
 
-    let matchesDateRange = true
+    let matchesDateRange = true;
     if (dateRange?.from) {
-      const fromDate = new Date(dateRange.from)
-      fromDate.setHours(0, 0, 0, 0)
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
 
       // Convertir la fecha de emisión al formato Date
-      const emisionDate = new Date(factura.fechaEmision)
+      const emisionDate = new Date(factura.fechaEmision);
 
       if (dateRange.to) {
-        const toDate = new Date(dateRange.to)
-        toDate.setHours(23, 59, 59, 999)
-        matchesDateRange = emisionDate >= fromDate && emisionDate <= toDate
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        matchesDateRange = emisionDate >= fromDate && emisionDate <= toDate;
       } else {
-        matchesDateRange = emisionDate >= fromDate
+        matchesDateRange = emisionDate >= fromDate;
       }
     }
 
-    return matchesSearch && matchesEstado && matchesProveedor && matchesDateRange
-  })
+    return (
+      matchesSearch && matchesEstado && matchesProveedor && matchesDateRange
+    );
+  });
 
   // Paginación
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentItems = filteredFacturas.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(filteredFacturas.length / itemsPerPage)
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredFacturas.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredFacturas.length / itemsPerPage);
 
   // Función para exportar datos
   const exportData = (format: string) => {
-    setExportFormat(format)
+    setExportFormat(format);
     // Aquí iría la lógica para exportar los datos en el formato seleccionado
-    console.log(`Exportando datos en formato ${format}`)
+    console.log(`Exportando datos en formato ${format}`);
     // Simular descarga
     setTimeout(() => {
-      setExportFormat(null)
-    }, 1500)
-  }
+      setExportFormat(null);
+    }, 1500);
+  };
 
   // Función para limpiar filtros
   const clearFilters = () => {
-    setSearchTerm("")
-    setSelectedEstado(null)
-    setSelectedProveedor(null)
-    setDateRange(undefined)
-  }
+    setSearchTerm("");
+    setSelectedEstado(null);
+    setSelectedProveedor(null);
+    setDateRange(undefined);
+  };
 
   // Función para calcular el porcentaje de pago
   const calcularPorcentajePago = (montoPagado: number, montoTotal: number) => {
-    return (montoPagado / montoTotal) * 100
-  }
+    return (montoPagado / montoTotal) * 100;
+  };
 
   // Función para formatear la fecha
   const formatearFecha = (fechaStr: string): string => {
     try {
-      const fecha = new Date(fechaStr)
-      return fecha.toLocaleDateString("es-DO")
+      const fecha = new Date(fechaStr);
+      return fecha.toLocaleDateString("es-DO");
     } catch (error) {
-      return fechaStr
+      return fechaStr;
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Lista de Facturas y Estado de Pago</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Lista de Facturas y Estado de Pago
+        </h1>
         <div className="flex gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -229,7 +263,9 @@ export default function ListaFacturasPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Filtros de búsqueda</CardTitle>
-          <CardDescription>Utilice los filtros para encontrar facturas específicas</CardDescription>
+          <CardDescription>
+            Utilice los filtros para encontrar facturas específicas
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
@@ -253,7 +289,10 @@ export default function ListaFacturasPage() {
                   <Filter className="mr-2 h-4 w-4" />
                   Filtros
                 </Button>
-                {(searchTerm || selectedEstado || selectedProveedor || dateRange) && (
+                {(searchTerm ||
+                  selectedEstado ||
+                  selectedProveedor ||
+                  dateRange) && (
                   <Button
                     variant="ghost"
                     onClick={clearFilters}
@@ -269,10 +308,14 @@ export default function ListaFacturasPage() {
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Estado</label>
+                  <label className="text-sm font-medium mb-1 block">
+                    Estado
+                  </label>
                   <Select
                     value={selectedEstado || ""}
-                    onValueChange={(value) => setSelectedEstado(value === "" ? null : value)}
+                    onValueChange={(value) =>
+                      setSelectedEstado(value === "" ? null : value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todos los estados" />
@@ -288,16 +331,22 @@ export default function ListaFacturasPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Proveedor</label>
+                  <label className="text-sm font-medium mb-1 block">
+                    Proveedor
+                  </label>
                   <Select
                     value={selectedProveedor || ""}
-                    onValueChange={(value) => setSelectedProveedor(value === "" ? null : value)}
+                    onValueChange={(value) =>
+                      setSelectedProveedor(value === "" ? null : value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todos los proveedores" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todos">Todos los proveedores</SelectItem>
+                      <SelectItem value="todos">
+                        Todos los proveedores
+                      </SelectItem>
                       {proveedores.map((proveedor) => (
                         <SelectItem key={proveedor} value={proveedor}>
                           {proveedor}
@@ -307,21 +356,29 @@ export default function ListaFacturasPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Rango de fechas de emisión</label>
+                  <label className="text-sm font-medium mb-1 block">
+                    Rango de fechas de emisión
+                  </label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {dateRange?.from ? (
                           dateRange.to ? (
                             <>
-                              {format(dateRange.from, "dd/MM/yyyy")} - {format(dateRange.to, "dd/MM/yyyy")}
+                              {format(dateRange.from, "dd/MM/yyyy")} -{" "}
+                              {format(dateRange.to, "dd/MM/yyyy")}
                             </>
                           ) : (
                             format(dateRange.from, "dd/MM/yyyy")
                           )
                         ) : (
-                          <span className="text-muted-foreground">Seleccionar fechas</span>
+                          <span className="text-muted-foreground">
+                            Seleccionar fechas
+                          </span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -377,15 +434,21 @@ export default function ListaFacturasPage() {
                         <TableCell>
                           <Checkbox />
                         </TableCell>
-                        <TableCell className="font-medium">{factura.id}</TableCell>
+                        <TableCell className="font-medium">
+                          {factura.id}
+                        </TableCell>
                         <TableCell>
                           <div>
                             <div>{factura.proveedor.nombre}</div>
-                            <div className="text-xs text-gray-500">{factura.proveedor.id}</div>
+                            <div className="text-xs text-gray-500">
+                              {factura.proveedor.id}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{factura.numeroFactura}</TableCell>
-                        <TableCell>{formatearFecha(factura.fechaEmision)}</TableCell>
+                        <TableCell>
+                          {formatearFecha(factura.fechaEmision)}
+                        </TableCell>
                         <TableCell>
                           RD${" "}
                           {factura.montoTotal.toLocaleString("es-DO", {
@@ -398,10 +461,26 @@ export default function ListaFacturasPage() {
                             <Badge
                               variant="outline"
                               className={`
-                                ${factura.estado === "Pagada" ? "border-green-500 text-green-600 bg-green-50" : ""}
-                                ${factura.estado === "Pendiente" ? "border-yellow-500 text-yellow-600 bg-yellow-50" : ""}
-                                ${factura.estado === "Pago Parcial" ? "border-blue-500 text-blue-600 bg-blue-50" : ""}
-                                ${factura.estado === "Rechazada" ? "border-red-500 text-red-600 bg-red-50" : ""}
+                                ${
+                                  factura.estado === "Pagada"
+                                    ? "border-green-500 text-green-600 bg-green-50"
+                                    : ""
+                                }
+                                ${
+                                  factura.estado === "Pendiente"
+                                    ? "border-yellow-500 text-yellow-600 bg-yellow-50"
+                                    : ""
+                                }
+                                ${
+                                  factura.estado === "Pago Parcial"
+                                    ? "border-blue-500 text-blue-600 bg-blue-50"
+                                    : ""
+                                }
+                                ${
+                                  factura.estado === "Rechazada"
+                                    ? "border-red-500 text-red-600 bg-red-50"
+                                    : ""
+                                }
                                 ${
                                   factura.estado === "En Revisión"
                                     ? "border-purple-500 text-purple-600 bg-purple-50"
@@ -413,16 +492,29 @@ export default function ListaFacturasPage() {
                             </Badge>
                             <div className="flex items-center gap-2">
                               <Progress
-                                value={calcularPorcentajePago(factura.montoPagado, factura.montoTotal)}
+                                value={calcularPorcentajePago(
+                                  factura.montoPagado,
+                                  factura.montoTotal
+                                )}
                                 className="h-2"
                               />
                               <span className="text-xs">
-                                {Math.round(calcularPorcentajePago(factura.montoPagado, factura.montoTotal))}%
+                                {Math.round(
+                                  calcularPorcentajePago(
+                                    factura.montoPagado,
+                                    factura.montoTotal
+                                  )
+                                )}
+                                %
                               </span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{factura.fechaPago ? formatearFecha(factura.fechaPago) : "-"}</TableCell>
+                        <TableCell>
+                          {factura.fechaPago
+                            ? formatearFecha(factura.fechaPago)
+                            : "-"}
+                        </TableCell>
                         <TableCell>{factura.metodoPago || "-"}</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -435,7 +527,10 @@ export default function ListaFacturasPage() {
                               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem>
-                                <Link href={`/facturacion/${factura.id}`} className="flex w-full">
+                                <Link
+                                  href={`/facturacion/${factura.id}`}
+                                  className="flex w-full"
+                                >
                                   <Eye className="mr-2 h-4 w-4" />
                                   Ver detalles
                                 </Link>
@@ -461,7 +556,10 @@ export default function ListaFacturasPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                      <TableCell
+                        colSpan={10}
+                        className="h-24 text-center text-muted-foreground"
+                      >
                         No se encontraron resultados.
                       </TableCell>
                     </TableRow>
@@ -478,8 +576,8 @@ export default function ListaFacturasPage() {
                 <Select
                   value={itemsPerPage.toString()}
                   onValueChange={(value) => {
-                    setItemsPerPage(Number.parseInt(value))
-                    setCurrentPage(1)
+                    setItemsPerPage(Number.parseInt(value));
+                    setCurrentPage(1);
                   }}
                 >
                   <SelectTrigger className="w-[70px]">
@@ -501,7 +599,9 @@ export default function ListaFacturasPage() {
                   {filteredFacturas.length > 0 ? indexOfFirstItem + 1 : 0}-
                   {Math.min(indexOfLastItem, filteredFacturas.length)}
                 </span>{" "}
-                de <span className="font-medium">{filteredFacturas.length}</span> resultados
+                de{" "}
+                <span className="font-medium">{filteredFacturas.length}</span>{" "}
+                resultados
               </div>
 
               <div className="flex items-center space-x-2">
@@ -539,5 +639,5 @@ export default function ListaFacturasPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

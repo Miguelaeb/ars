@@ -7,10 +7,10 @@ import {
 
 // Obtener afiliado por ID
 export async function GET(
-  request: Request,
-  context: { params: { id: string } }
+  _request: Request,
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params?.id;
+  const id = params.id;
 
   if (!id) {
     return NextResponse.json({ error: "ID no proporcionado" }, { status: 400 });
@@ -37,8 +37,11 @@ export async function GET(
 }
 
 // Actualizar afiliado por ID
-export async function PUT(req: Request, context: { params: { id: string } }) {
-  const id = context.params?.id;
+export async function PUT(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
 
   if (!id) {
     return NextResponse.json({ error: "ID no proporcionado" }, { status: 400 });
@@ -60,10 +63,10 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
 
 // Eliminar afiliado por ID
 export async function DELETE(
-  request: Request,
-  context: { params: { id: string } }
+  _request: Request,
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params?.id;
+  const id = params.id;
 
   if (!id) {
     return NextResponse.json({ error: "ID no proporcionado" }, { status: 400 });

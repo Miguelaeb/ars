@@ -1,17 +1,29 @@
-"use client"
+"use client";
 
-import type React from "react"
-import type { UserRole } from "@/contexts/auth-context"
+import type React from "react";
+import type { UserRole } from "@/contexts/auth-context";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Save, CheckCircle2, Loader2 } from "lucide-react"
-import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Search, Save, CheckCircle2, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -19,34 +31,34 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useAuth } from "@/contexts/auth-context"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { getUsers, updateUser } from "@/lib/db-service"
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/auth-context";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { updateUser } from "@/lib/db-service";
 
 interface RoleDefinition {
-  id: UserRole
-  label: string
-  description: string
+  id: UserRole;
+  label: string;
+  description: string;
   modules: {
-    id: string
-    name: string
-    permissions: string[]
-  }[]
+    id: string;
+    name: string;
+    permissions: string[];
+  }[];
 }
 
 interface User {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-  department: string
-  position: string
-  status: "active" | "inactive" | "blocked"
-  createdAt: string
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  position: string;
+  status: "active" | "inactive" | "blocked";
+  createdAt: string;
 }
 
 const roles: RoleDefinition[] = [
@@ -56,13 +68,37 @@ const roles: RoleDefinition[] = [
     description: "Acceso completo al sistema",
     modules: [
       { id: "dashboard", name: "Dashboard", permissions: ["view"] },
-      { id: "afiliados", name: "Afiliados", permissions: ["view", "create", "edit", "delete"] },
-      { id: "autorizaciones", name: "Autorizaciones", permissions: ["view", "create", "approve", "reject"] },
-      { id: "planes", name: "Planes", permissions: ["view", "create", "edit", "delete"] },
-      { id: "facturacion", name: "Facturación", permissions: ["view", "create", "validate", "pay"] },
-      { id: "prestadores", name: "Prestadores", permissions: ["view", "create", "edit", "delete"] },
+      {
+        id: "afiliados",
+        name: "Afiliados",
+        permissions: ["view", "create", "edit", "delete"],
+      },
+      {
+        id: "autorizaciones",
+        name: "Autorizaciones",
+        permissions: ["view", "create", "approve", "reject"],
+      },
+      {
+        id: "planes",
+        name: "Planes",
+        permissions: ["view", "create", "edit", "delete"],
+      },
+      {
+        id: "facturacion",
+        name: "Facturación",
+        permissions: ["view", "create", "validate", "pay"],
+      },
+      {
+        id: "prestadores",
+        name: "Prestadores",
+        permissions: ["view", "create", "edit", "delete"],
+      },
       { id: "reportes", name: "Reportes", permissions: ["view", "export"] },
-      { id: "usuarios", name: "Usuarios", permissions: ["view", "create", "edit", "delete", "assign_roles"] },
+      {
+        id: "usuarios",
+        name: "Usuarios",
+        permissions: ["view", "create", "edit", "delete", "assign_roles"],
+      },
     ],
   },
   {
@@ -72,7 +108,11 @@ const roles: RoleDefinition[] = [
     modules: [
       { id: "dashboard", name: "Dashboard", permissions: ["view"] },
       { id: "afiliados", name: "Afiliados", permissions: ["view"] },
-      { id: "autorizaciones", name: "Autorizaciones", permissions: ["view", "create", "approve", "reject"] },
+      {
+        id: "autorizaciones",
+        name: "Autorizaciones",
+        permissions: ["view", "create", "approve", "reject"],
+      },
       { id: "prestadores", name: "Prestadores", permissions: ["view"] },
     ],
   },
@@ -83,7 +123,11 @@ const roles: RoleDefinition[] = [
     modules: [
       { id: "dashboard", name: "Dashboard", permissions: ["view"] },
       { id: "afiliados", name: "Afiliados", permissions: ["view"] },
-      { id: "facturacion", name: "Facturación", permissions: ["view", "create", "validate", "pay"] },
+      {
+        id: "facturacion",
+        name: "Facturación",
+        permissions: ["view", "create", "validate", "pay"],
+      },
       { id: "reportes", name: "Reportes", permissions: ["view", "export"] },
     ],
   },
@@ -93,7 +137,11 @@ const roles: RoleDefinition[] = [
     description: "Gestión de afiliados y dependientes",
     modules: [
       { id: "dashboard", name: "Dashboard", permissions: ["view"] },
-      { id: "afiliados", name: "Afiliados", permissions: ["view", "create", "edit"] },
+      {
+        id: "afiliados",
+        name: "Afiliados",
+        permissions: ["view", "create", "edit"],
+      },
       { id: "planes", name: "Planes", permissions: ["view"] },
     ],
   },
@@ -104,7 +152,11 @@ const roles: RoleDefinition[] = [
     modules: [
       { id: "dashboard", name: "Dashboard", permissions: ["view"] },
       { id: "afiliados", name: "Afiliados", permissions: ["view"] },
-      { id: "autorizaciones", name: "Autorizaciones", permissions: ["view", "create", "approve", "reject"] },
+      {
+        id: "autorizaciones",
+        name: "Autorizaciones",
+        permissions: ["view", "create", "approve", "reject"],
+      },
       { id: "prestadores", name: "Prestadores", permissions: ["view"] },
     ],
   },
@@ -114,9 +166,21 @@ const roles: RoleDefinition[] = [
     description: "Puede aprobar solicitudes y gestionar usuarios",
     modules: [
       { id: "dashboard", name: "Dashboard", permissions: ["view"] },
-      { id: "afiliados", name: "Afiliados", permissions: ["view", "create", "edit"] },
-      { id: "autorizaciones", name: "Autorizaciones", permissions: ["view", "approve", "reject"] },
-      { id: "facturacion", name: "Facturación", permissions: ["view", "validate"] },
+      {
+        id: "afiliados",
+        name: "Afiliados",
+        permissions: ["view", "create", "edit"],
+      },
+      {
+        id: "autorizaciones",
+        name: "Autorizaciones",
+        permissions: ["view", "approve", "reject"],
+      },
+      {
+        id: "facturacion",
+        name: "Facturación",
+        permissions: ["view", "validate"],
+      },
       { id: "reportes", name: "Reportes", permissions: ["view", "export"] },
       { id: "usuarios", name: "Usuarios", permissions: ["view", "create"] },
     ],
@@ -134,100 +198,118 @@ const roles: RoleDefinition[] = [
       { id: "reportes", name: "Reportes", permissions: ["view"] },
     ],
   },
-]
+];
 
 export default function AsignarRolesPage() {
-  const { toast } = useToast()
-  const { hasPermission } = useAuth()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [selectedRole, setSelectedRole] = useState<UserRole | "">("")
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [roleUpdated, setRoleUpdated] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole | "">("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [roleUpdated, setRoleUpdated] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Fetch users from the database
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        setIsLoading(true)
-        const fetchedUsers = await getUsers()
-        // Only show active users
-        setUsers(fetchedUsers.filter((user) => user.status === "active"))
+        setIsLoading(true);
+        const response = await fetch("/api/usuarios");
+        const fetchedUsers = await response.json();
+
+        setUsers(fetchedUsers.filter((user: any) => user.status === "active"));
       } catch (error) {
-        console.error("Error fetching users:", error)
+        console.error("Error fetching users:", error);
         toast({
           title: "Error",
-          description: "No se pudieron cargar los usuarios. Intente de nuevo más tarde.",
+          description:
+            "No se pudieron cargar los usuarios. Intente de nuevo más tarde.",
           variant: "destructive",
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchUsers()
-  }, [toast])
+    fetchUsers();
+  }, [toast]);
 
   // Filter users based on search term
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Search is already handled by the filter above
-  }
+  };
 
   const handleSelectUser = (user: User) => {
-    setSelectedUser(user)
-    setSelectedRole(user.role)
-    setRoleUpdated(false)
-  }
+    setSelectedUser(user);
+    setSelectedRole(user.role);
+    setRoleUpdated(false);
+  };
 
   const handleRoleChange = (role: UserRole) => {
-    setSelectedRole(role)
-  }
+    setSelectedRole(role);
+  };
 
   const handleSaveRole = () => {
-    if (!selectedUser || !selectedRole) return
-    setShowConfirmation(true)
-  }
+    if (!selectedUser || !selectedRole) return;
+    setShowConfirmation(true);
+  };
 
   const confirmRoleChange = async () => {
-    if (!selectedUser || !selectedRole) return
+    if (!selectedUser || !selectedRole) return;
 
-    setIsUpdating(true)
-    setShowConfirmation(false)
+    setIsUpdating(true);
+    setShowConfirmation(false);
 
     try {
       // Update the user's role in the database
-      await updateUser(selectedUser.id, { role: selectedRole })
+      await fetch(`/api/usuarios/${selectedUser.id}/update`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role: selectedRole,
+          updatedAt: new Date().toISOString(),
+        }),
+      });
 
       // Update the local state
-      setUsers(users.map((user) => (user.id === selectedUser.id ? { ...user, role: selectedRole } : user)))
+      setUsers(
+        users.map((user) =>
+          user.id === selectedUser.id ? { ...user, role: selectedRole } : user
+        )
+      );
 
-      setRoleUpdated(true)
+      setRoleUpdated(true);
 
       toast({
         title: "Rol actualizado",
-        description: `El rol de ${selectedUser.name} ha sido actualizado a ${roles.find((r) => r.id === selectedRole)?.label}`,
-      })
+        description: `El rol de ${selectedUser.name} ha sido actualizado a ${
+          roles.find((r) => r.id === selectedRole)?.label
+        }`,
+      });
     } catch (error) {
-      console.error("Error updating user role:", error)
+      console.error("Error updating user role:", error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el rol del usuario. Intente de nuevo más tarde.",
+        description:
+          "No se pudo actualizar el rol del usuario. Intente de nuevo más tarde.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsUpdating(false)
+      setIsUpdating(false);
     }
-  }
+  };
 
   // Check if user has permission to assign roles
   if (!hasPermission("usuarios", "assign_roles")) {
@@ -236,11 +318,12 @@ export default function AsignarRolesPage() {
         <Alert variant="destructive">
           <AlertTitle>Acceso denegado</AlertTitle>
           <AlertDescription>
-            No tiene permisos para asignar roles a usuarios. Contacte al administrador del sistema.
+            No tiene permisos para asignar roles a usuarios. Contacte al
+            administrador del sistema.
           </AlertDescription>
         </Alert>
       </div>
-    )
+    );
   }
 
   return (
@@ -261,7 +344,9 @@ export default function AsignarRolesPage() {
           <Card>
             <CardHeader>
               <CardTitle>Buscar Usuario</CardTitle>
-              <CardDescription>Busque el usuario al que desea asignar un rol</CardDescription>
+              <CardDescription>
+                Busque el usuario al que desea asignar un rol
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSearch} className="space-y-4">
@@ -311,9 +396,12 @@ export default function AsignarRolesPage() {
                             </Avatar>
                             <div>
                               <div className="font-medium">{user.name}</div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
                               <Badge variant="outline" className="mt-1">
-                                {roles.find((r) => r.id === user.role)?.label || user.role}
+                                {roles.find((r) => r.id === user.role)?.label ||
+                                  user.role}
                               </Badge>
                             </div>
                           </div>
@@ -332,14 +420,20 @@ export default function AsignarRolesPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Asignar Rol a {selectedUser.name}</CardTitle>
-                <CardDescription>Seleccione el rol que desea asignar al usuario</CardDescription>
+                <CardDescription>
+                  Seleccione el rol que desea asignar al usuario
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {roleUpdated ? (
                   <Alert className="bg-green-50 border-green-200 mb-4">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <AlertTitle className="text-green-600">Rol actualizado</AlertTitle>
-                    <AlertDescription>El rol del usuario ha sido actualizado exitosamente.</AlertDescription>
+                    <AlertTitle className="text-green-600">
+                      Rol actualizado
+                    </AlertTitle>
+                    <AlertDescription>
+                      El rol del usuario ha sido actualizado exitosamente.
+                    </AlertDescription>
                   </Alert>
                 ) : null}
 
@@ -351,16 +445,24 @@ export default function AsignarRolesPage() {
                         <div className="font-medium">{selectedUser.name}</div>
                       </div>
                       <div>
-                        <Label className="text-sm text-gray-500">Correo Electrónico</Label>
+                        <Label className="text-sm text-gray-500">
+                          Correo Electrónico
+                        </Label>
                         <div className="font-medium">{selectedUser.email}</div>
                       </div>
                       <div>
-                        <Label className="text-sm text-gray-500">Departamento</Label>
-                        <div className="font-medium">{selectedUser.department}</div>
+                        <Label className="text-sm text-gray-500">
+                          Departamento
+                        </Label>
+                        <div className="font-medium">
+                          {selectedUser.department}
+                        </div>
                       </div>
                       <div>
                         <Label className="text-sm text-gray-500">Cargo</Label>
-                        <div className="font-medium">{selectedUser.position}</div>
+                        <div className="font-medium">
+                          {selectedUser.position}
+                        </div>
                       </div>
                     </div>
 
@@ -368,14 +470,20 @@ export default function AsignarRolesPage() {
                       <Label htmlFor="role">Rol Actual</Label>
                       <div className="flex items-center space-x-2">
                         <Badge variant="outline" className="text-sm py-1">
-                          {roles.find((r) => r.id === selectedUser.role)?.label || selectedUser.role}
+                          {roles.find((r) => r.id === selectedUser.role)
+                            ?.label || selectedUser.role}
                         </Badge>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="new-role">Nuevo Rol</Label>
-                      <Select value={selectedRole} onValueChange={(value) => handleRoleChange(value as UserRole)}>
+                      <Select
+                        value={selectedRole}
+                        onValueChange={(value) =>
+                          handleRoleChange(value as UserRole)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccione un rol" />
                         </SelectTrigger>
@@ -392,19 +500,39 @@ export default function AsignarRolesPage() {
                     {selectedRole && (
                       <Tabs defaultValue="description" className="mt-6">
                         <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="description">Descripción</TabsTrigger>
-                          <TabsTrigger value="permissions">Permisos</TabsTrigger>
+                          <TabsTrigger value="description">
+                            Descripción
+                          </TabsTrigger>
+                          <TabsTrigger value="permissions">
+                            Permisos
+                          </TabsTrigger>
                         </TabsList>
-                        <TabsContent value="description" className="p-4 border rounded-md mt-2">
-                          <h3 className="font-medium mb-2">{roles.find((r) => r.id === selectedRole)?.label}</h3>
-                          <p className="text-gray-600">{roles.find((r) => r.id === selectedRole)?.description}</p>
+                        <TabsContent
+                          value="description"
+                          className="p-4 border rounded-md mt-2"
+                        >
+                          <h3 className="font-medium mb-2">
+                            {roles.find((r) => r.id === selectedRole)?.label}
+                          </h3>
+                          <p className="text-gray-600">
+                            {
+                              roles.find((r) => r.id === selectedRole)
+                                ?.description
+                            }
+                          </p>
                         </TabsContent>
-                        <TabsContent value="permissions" className="border rounded-md mt-2">
+                        <TabsContent
+                          value="permissions"
+                          className="border rounded-md mt-2"
+                        >
                           <div className="space-y-4 p-4">
                             {roles
                               .find((r) => r.id === selectedRole)
                               ?.modules.map((module) => (
-                                <div key={module.id} className="border-t pt-3 first:border-t-0 first:pt-0">
+                                <div
+                                  key={module.id}
+                                  className="border-t pt-3 first:border-t-0 first:pt-0"
+                                >
                                   <h4 className="font-medium">{module.name}</h4>
                                   <div className="flex flex-wrap gap-2 mt-2">
                                     {module.permissions.map((permission) => (
@@ -426,7 +554,11 @@ export default function AsignarRolesPage() {
                     <div className="flex justify-end mt-6">
                       <Button
                         onClick={handleSaveRole}
-                        disabled={!selectedRole || selectedRole === selectedUser.role || isUpdating}
+                        disabled={
+                          !selectedRole ||
+                          selectedRole === selectedUser.role ||
+                          isUpdating
+                        }
                         className="bg-gray-600 hover:bg-gray-700"
                       >
                         {isUpdating ? (
@@ -464,15 +596,27 @@ export default function AsignarRolesPage() {
             <DialogTitle>Confirmar cambio de rol</DialogTitle>
             <DialogDescription>
               ¿Está seguro que desea cambiar el rol de {selectedUser?.name} de{" "}
-              <strong>{roles.find((r) => r.id === selectedUser?.role)?.label}</strong> a{" "}
-              <strong>{roles.find((r) => r.id === selectedRole)?.label}</strong>?
+              <strong>
+                {roles.find((r) => r.id === selectedUser?.role)?.label}
+              </strong>{" "}
+              a{" "}
+              <strong>{roles.find((r) => r.id === selectedRole)?.label}</strong>
+              ?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmation(false)} disabled={isUpdating}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmation(false)}
+              disabled={isUpdating}
+            >
               Cancelar
             </Button>
-            <Button onClick={confirmRoleChange} className="bg-gray-600 hover:bg-gray-700" disabled={isUpdating}>
+            <Button
+              onClick={confirmRoleChange}
+              className="bg-gray-600 hover:bg-gray-700"
+              disabled={isUpdating}
+            >
               {isUpdating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -486,5 +630,5 @@ export default function AsignarRolesPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

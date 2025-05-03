@@ -1,29 +1,54 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
-import { useAuth, type UserRole } from "@/contexts/auth-context"
-import { addUser } from "@/lib/db-service"
-import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "@/components/ui/use-toast";
+import { useAuth, type UserRole } from "@/contexts/auth-context";
+import { addUser } from "@/lib/db-service";
+import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const formSchema = z
   .object({
-    name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres" }),
+    name: z
+      .string()
+      .min(3, { message: "El nombre debe tener al menos 3 caracteres" }),
     email: z.string().email({ message: "Correo electrónico inválido" }),
-    password: z.string().min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
+    password: z
+      .string()
+      .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
     confirmPassword: z.string(),
-    role: z.enum(["admin", "doctor", "billing", "afiliaciones", "autorizaciones", "supervisor", "consulta"] as const),
+    role: z.enum([
+      "admin",
+      "doctor",
+      "billing",
+      "afiliaciones",
+      "autorizaciones",
+      "supervisor",
+      "consulta",
+    ] as const),
     department: z.string().min(2, { message: "El departamento es requerido" }),
     position: z.string().min(2, { message: "El cargo es requerido" }),
     status: z.enum(["active", "inactive", "blocked"]),
@@ -31,9 +56,9 @@ const formSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Las contraseñas no coinciden",
     path: ["confirmPassword"],
-  })
+  });
 
-type FormValues = z.infer<typeof formSchema>
+type FormValues = z.infer<typeof formSchema>;
 
 // Predefined lists for departments and positions
 const departments = [
@@ -49,10 +74,13 @@ const departments = [
   { value: "recursos_humanos", label: "Recursos Humanos" },
   { value: "finanzas", label: "Finanzas" },
   { value: "legal", label: "Legal" },
-]
+];
 
 // Positions organized by department
-const positionsByDepartment: Record<string, { value: string; label: string }[]> = {
+const positionsByDepartment: Record<
+  string,
+  { value: string; label: string }[]
+> = {
   afiliaciones: [
     { value: "coordinador_afiliaciones", label: "Coordinador de Afiliaciones" },
     { value: "analista_afiliaciones", label: "Analista de Afiliaciones" },
@@ -60,10 +88,16 @@ const positionsByDepartment: Record<string, { value: string; label: string }[]> 
     { value: "supervisor_afiliaciones", label: "Supervisor de Afiliaciones" },
   ],
   autorizaciones: [
-    { value: "coordinador_autorizaciones", label: "Coordinador de Autorizaciones" },
+    {
+      value: "coordinador_autorizaciones",
+      label: "Coordinador de Autorizaciones",
+    },
     { value: "analista_autorizaciones", label: "Analista de Autorizaciones" },
     { value: "medico_auditor", label: "Médico Auditor" },
-    { value: "supervisor_autorizaciones", label: "Supervisor de Autorizaciones" },
+    {
+      value: "supervisor_autorizaciones",
+      label: "Supervisor de Autorizaciones",
+    },
   ],
   facturacion: [
     { value: "coordinador_facturacion", label: "Coordinador de Facturación" },
@@ -88,7 +122,10 @@ const positionsByDepartment: Record<string, { value: string; label: string }[]> 
     { value: "director_administrativo", label: "Director Administrativo" },
     { value: "gerente_administrativo", label: "Gerente Administrativo" },
     { value: "asistente_administrativo", label: "Asistente Administrativo" },
-    { value: "coordinador_administrativo", label: "Coordinador Administrativo" },
+    {
+      value: "coordinador_administrativo",
+      label: "Coordinador Administrativo",
+    },
   ],
   direccion: [
     { value: "director_general", label: "Director General" },
@@ -103,14 +140,26 @@ const positionsByDepartment: Record<string, { value: string; label: string }[]> 
     { value: "asistente_auditoria", label: "Asistente de Auditoría" },
   ],
   servicio_cliente: [
-    { value: "coordinador_servicio", label: "Coordinador de Servicio al Cliente" },
-    { value: "representante_servicio", label: "Representante de Servicio al Cliente" },
-    { value: "supervisor_servicio", label: "Supervisor de Servicio al Cliente" },
+    {
+      value: "coordinador_servicio",
+      label: "Coordinador de Servicio al Cliente",
+    },
+    {
+      value: "representante_servicio",
+      label: "Representante de Servicio al Cliente",
+    },
+    {
+      value: "supervisor_servicio",
+      label: "Supervisor de Servicio al Cliente",
+    },
   ],
   recursos_humanos: [
     { value: "director_rrhh", label: "Director de Recursos Humanos" },
     { value: "analista_rrhh", label: "Analista de Recursos Humanos" },
-    { value: "especialista_reclutamiento", label: "Especialista en Reclutamiento" },
+    {
+      value: "especialista_reclutamiento",
+      label: "Especialista en Reclutamiento",
+    },
     { value: "asistente_rrhh", label: "Asistente de Recursos Humanos" },
   ],
   finanzas: [
@@ -132,7 +181,7 @@ const positionsByDepartment: Record<string, { value: string; label: string }[]> 
     { value: "asistente", label: "Asistente" },
     { value: "supervisor", label: "Supervisor" },
   ],
-}
+};
 
 const roleDescriptions: Record<UserRole, string> = {
   admin: "Acceso completo a todas las funciones del sistema",
@@ -142,20 +191,20 @@ const roleDescriptions: Record<UserRole, string> = {
   autorizaciones: "Gestión de autorizaciones médicas",
   supervisor: "Supervisión de operaciones y reportes",
   consulta: "Acceso de solo lectura a información básica",
-}
+};
 
 export default function RegistrarUsuarioPage() {
-  const { hasPermission } = useAuth()
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("")
-  const [availablePositions, setAvailablePositions] = useState<{ value: string; label: string }[]>(
-    positionsByDepartment.default,
-  )
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const { hasPermission } = useAuth();
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [availablePositions, setAvailablePositions] = useState<
+    { value: string; label: string }[]
+  >(positionsByDepartment.default);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -169,59 +218,70 @@ export default function RegistrarUsuarioPage() {
       position: "",
       status: "active",
     },
-  })
+  });
 
   // Update available positions when department changes
   const handleDepartmentChange = (value: string) => {
-    setSelectedDepartment(value)
-    form.setValue("department", value)
+    setSelectedDepartment(value);
+    form.setValue("department", value);
 
     // Reset position when department changes
-    form.setValue("position", "")
+    form.setValue("position", "");
 
     // Update available positions based on selected department
-    setAvailablePositions(positionsByDepartment[value] || positionsByDepartment.default)
-  }
+    setAvailablePositions(
+      positionsByDepartment[value] || positionsByDepartment.default
+    );
+  };
 
   const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true)
-    setError(null)
+    setIsSubmitting(true);
+    setError(null);
 
     try {
-      await addUser({
-        name: data.name,
-        email: data.email,
-        password: data.password, // Now we're passing the password
-        role: data.role,
-        department: data.department,
-        position: data.position,
-        status: data.status,
-      })
+      await fetch("/api/usuarios/registrar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          role: data.role,
+          department: data.department,
+          position: data.position,
+          status: data.status,
+        }),
+      });
 
-      setSuccess(true)
+      setSuccess(true);
       toast({
         title: "Usuario registrado",
         description: "El usuario ha sido registrado exitosamente",
-      })
+      });
 
       // Reset form after successful submission
-      form.reset()
+      form.reset();
 
       // Redirect after a short delay
       setTimeout(() => {
-        router.push("/usuarios")
-      }, 2000)
+        router.push("/usuarios");
+      }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrar usuario")
+      setError(
+        err instanceof Error ? err.message : "Error al registrar usuario"
+      );
       toast({
         variant: "destructive",
         title: "Error",
-        description: err instanceof Error ? err.message : "Error al registrar usuario",
-      })
+        description:
+          err instanceof Error ? err.message : "Error al registrar usuario",
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   // Check if user has permission to create users
   if (!hasPermission("usuarios", "create")) {
@@ -231,11 +291,12 @@ export default function RegistrarUsuarioPage() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Acceso denegado</AlertTitle>
           <AlertDescription>
-            No tiene permisos para registrar usuarios. Contacte al administrador del sistema.
+            No tiene permisos para registrar usuarios. Contacte al administrador
+            del sistema.
           </AlertDescription>
         </Alert>
       </div>
-    )
+    );
   }
 
   return (
@@ -246,7 +307,9 @@ export default function RegistrarUsuarioPage() {
         <Alert className="bg-green-50 text-green-800 border-green-200">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertTitle>Usuario registrado exitosamente</AlertTitle>
-          <AlertDescription>El usuario ha sido registrado en el sistema. Redirigiendo...</AlertDescription>
+          <AlertDescription>
+            El usuario ha sido registrado en el sistema. Redirigiendo...
+          </AlertDescription>
         </Alert>
       )}
 
@@ -268,17 +331,30 @@ export default function RegistrarUsuarioPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Nombre completo</Label>
-                <Input id="name" placeholder="Nombre completo" {...form.register("name")} />
+                <Input
+                  id="name"
+                  placeholder="Nombre completo"
+                  {...form.register("name")}
+                />
                 {form.formState.errors.name && (
-                  <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.name.message}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email">Correo electrónico</Label>
-                <Input id="email" type="email" placeholder="correo@vidasalud.com.do" {...form.register("email")} />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="correo@vidasalud.com.do"
+                  {...form.register("email")}
+                />
                 {form.formState.errors.email && (
-                  <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -297,16 +373,25 @@ export default function RegistrarUsuarioPage() {
                   </SelectContent>
                 </Select>
                 {form.formState.errors.department && (
-                  <p className="text-sm text-red-500">{form.formState.errors.department.message}</p>
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.department.message}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="position">Cargo</Label>
-                <Select onValueChange={(value) => form.setValue("position", value)} disabled={!selectedDepartment}>
+                <Select
+                  onValueChange={(value) => form.setValue("position", value)}
+                  disabled={!selectedDepartment}
+                >
                   <SelectTrigger id="position">
                     <SelectValue
-                      placeholder={selectedDepartment ? "Seleccione un cargo" : "Primero seleccione un departamento"}
+                      placeholder={
+                        selectedDepartment
+                          ? "Seleccione un cargo"
+                          : "Primero seleccione un departamento"
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -318,7 +403,9 @@ export default function RegistrarUsuarioPage() {
                   </SelectContent>
                 </Select>
                 {form.formState.errors.position && (
-                  <p className="text-sm text-red-500">{form.formState.errors.position.message}</p>
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.position.message}
+                  </p>
                 )}
               </div>
 
@@ -338,11 +425,17 @@ export default function RegistrarUsuarioPage() {
                     className="absolute right-0 top-0 h-full px-3"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
                 {form.formState.errors.password && (
-                  <p className="text-sm text-red-500">{form.formState.errors.password.message}</p>
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -362,11 +455,17 @@ export default function RegistrarUsuarioPage() {
                     className="absolute right-0 top-0 h-full px-3"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
                 {form.formState.errors.confirmPassword && (
-                  <p className="text-sm text-red-500">{form.formState.errors.confirmPassword.message}</p>
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -376,7 +475,12 @@ export default function RegistrarUsuarioPage() {
               <RadioGroup
                 defaultValue="active"
                 className="flex space-x-4"
-                onValueChange={(value) => form.setValue("status", value as "active" | "inactive" | "blocked")}
+                onValueChange={(value) =>
+                  form.setValue(
+                    "status",
+                    value as "active" | "inactive" | "blocked"
+                  )
+                }
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="active" id="active" />
@@ -401,7 +505,12 @@ export default function RegistrarUsuarioPage() {
 
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
-              <Select defaultValue="consulta" onValueChange={(value) => form.setValue("role", value as UserRole)}>
+              <Select
+                defaultValue="consulta"
+                onValueChange={(value) =>
+                  form.setValue("role", value as UserRole)
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccione un rol" />
                 </SelectTrigger>
@@ -416,12 +525,18 @@ export default function RegistrarUsuarioPage() {
                 </SelectContent>
               </Select>
               {form.watch("role") && (
-                <p className="text-sm text-gray-500 mt-1">{roleDescriptions[form.watch("role") as UserRole]}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {roleDescriptions[form.watch("role") as UserRole]}
+                </p>
               )}
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" type="button" onClick={() => router.back()}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => router.back()}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
@@ -431,5 +546,5 @@ export default function RegistrarUsuarioPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,140 +1,176 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, AlertCircle, FileText, Building, Calendar, DollarSign } from "lucide-react"
-import { DbService } from "@/lib/db-service"
-import type { Factura } from "@/lib/types"
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Search,
+  AlertCircle,
+  FileText,
+  Building,
+  Calendar,
+  DollarSign,
+} from "lucide-react";
+import type { Factura } from "@/lib/types";
 
 export default function InvoiceStatusPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [searchType, setSearchType] = useState("id")
-  const [searchResults, setSearchResults] = useState<Factura[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [hasSearched, setHasSearched] = useState(false)
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
-  const [allFacturas, setAllFacturas] = useState<Factura[]>([])
-  const [providers, setProviders] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchType, setSearchType] = useState("id");
+  const [searchResults, setSearchResults] = useState<Factura[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [allFacturas, setAllFacturas] = useState<Factura[]>([]);
+  const [providers, setProviders] = useState<string[]>([]);
 
   // Load all invoices on component mount
   useEffect(() => {
     const loadFacturas = async () => {
-      const dbService = DbService.getInstance()
-      const facturas = await dbService.getFacturas()
-      setAllFacturas(facturas)
+      const res = await fetch("/api/facturas");
+      const facturas: Factura[] = await res.json();
 
-      // Extract unique provider IDs
-      const uniqueProviders = Array.from(new Set(facturas.map((f) => f.prestadorId)))
-      setProviders(uniqueProviders)
-    }
+      setAllFacturas(facturas);
 
-    loadFacturas()
-  }, [])
+      const uniqueProviders = Array.from(
+        new Set(facturas.map((f: Factura) => f.prestadorId))
+      );
+
+      setProviders(uniqueProviders);
+    };
+
+    loadFacturas();
+  }, []);
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return
+    if (!searchTerm.trim()) return;
 
-    setIsSearching(true)
-    setHasSearched(true)
+    setIsSearching(true);
+    setHasSearched(true);
 
     try {
-      const dbService = DbService.getInstance()
-      let results: Factura[] = []
+      let results: Factura[] = [];
 
       if (searchType === "id") {
-        // Search by invoice ID
-        const factura = await dbService.getFacturaById(searchTerm)
-        if (factura) {
-          results = [factura]
+        const res = await fetch(`/api/facturas/${searchTerm}`);
+        if (res.ok) {
+          const factura = await res.json();
+          results = [factura];
         }
-      } else if (searchType === "numero") {
-        // Search by invoice number
-        const facturas = await dbService.getFacturas()
-        results = facturas.filter((f) => f.numeroFactura.toLowerCase().includes(searchTerm.toLowerCase()))
-      } else if (searchType === "provider") {
-        // Search by provider ID
-        const facturas = await dbService.getFacturas()
-        results = facturas.filter((f) => f.prestadorId === searchTerm)
+      } else {
+        // Para búsqueda por número o proveedor, obtener todas las facturas
+        const res = await fetch("/api/facturas");
+        const facturas: Factura[] = await res.json();
+
+        if (searchType === "numero") {
+          results = facturas.filter((f) =>
+            f.numeroFactura.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        } else if (searchType === "provider") {
+          results = facturas.filter((f) => f.prestadorId === searchTerm);
+        }
       }
 
-      setSearchResults(results)
+      setSearchResults(results);
     } catch (error) {
-      console.error("Error searching invoices:", error)
+      console.error("Error searching invoices:", error);
     } finally {
-      setIsSearching(false)
+      setIsSearching(false);
     }
-  }
+  };
 
   const filterByStatus = (facturas: Factura[]) => {
-    if (!selectedStatus) return facturas
-    return facturas.filter((f) => f.estado === selectedStatus)
-  }
+    if (!selectedStatus) return facturas;
+    return facturas.filter((f) => f.estado === selectedStatus);
+  };
 
   const getStatusBadgeStyles = (status: string) => {
     switch (status) {
       case "pagada":
-        return "border-green-500 text-green-600 bg-green-50"
+        return "border-green-500 text-green-600 bg-green-50";
       case "pendiente":
-        return "border-yellow-500 text-yellow-600 bg-yellow-50"
+        return "border-yellow-500 text-yellow-600 bg-yellow-50";
       case "pago_parcial":
-        return "border-blue-500 text-blue-600 bg-blue-50"
+        return "border-blue-500 text-blue-600 bg-blue-50";
       case "rechazada":
-        return "border-red-500 text-red-600 bg-red-50"
+        return "border-red-500 text-red-600 bg-red-50";
       case "en_revision":
-        return "border-purple-500 text-purple-600 bg-purple-50"
+        return "border-purple-500 text-purple-600 bg-purple-50";
       default:
-        return "border-gray-500 text-gray-600 bg-gray-50"
+        return "border-gray-500 text-gray-600 bg-gray-50";
     }
-  }
+  };
 
   const formatStatus = (status: string) => {
     switch (status) {
       case "pagada":
-        return "Pagada"
+        return "Pagada";
       case "pendiente":
-        return "Pendiente"
+        return "Pendiente";
       case "pago_parcial":
-        return "Pago Parcial"
+        return "Pago Parcial";
       case "rechazada":
-        return "Rechazada"
+        return "Rechazada";
       case "en_revision":
-        return "En Revisión"
+        return "En Revisión";
       default:
-        return status
+        return status;
     }
-  }
+  };
 
   const calculatePaymentPercentage = (paid: number, total: number) => {
-    return (paid / total) * 100
-  }
+    return (paid / total) * 100;
+  };
 
-  const displayedResults = filterByStatus(searchResults)
+  const displayedResults = filterByStatus(searchResults);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Consulta de Estado de Facturas</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Consulta de Estado de Facturas
+        </h1>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Buscar Facturas</CardTitle>
-          <CardDescription>Consulte el estado de facturas por ID, número de factura o proveedor</CardDescription>
+          <CardDescription>
+            Consulte el estado de facturas por ID, número de factura o proveedor
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="search" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="search">Búsqueda</TabsTrigger>
               <TabsTrigger value="results">
-                Resultados {searchResults.length > 0 && `(${displayedResults.length})`}
+                Resultados{" "}
+                {searchResults.length > 0 && `(${displayedResults.length})`}
               </TabsTrigger>
             </TabsList>
 
@@ -148,7 +184,9 @@ export default function InvoiceStatusPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="id">ID de Factura</SelectItem>
-                        <SelectItem value="numero">Número de Factura</SelectItem>
+                        <SelectItem value="numero">
+                          Número de Factura
+                        </SelectItem>
                         <SelectItem value="provider">Proveedor</SelectItem>
                       </SelectContent>
                     </Select>
@@ -174,7 +212,9 @@ export default function InvoiceStatusPage() {
                         <Input
                           type="text"
                           placeholder={
-                            searchType === "id" ? "Ingrese el ID de la factura..." : "Ingrese el número de factura..."
+                            searchType === "id"
+                              ? "Ingrese el ID de la factura..."
+                              : "Ingrese el número de factura..."
                           }
                           className="pl-8"
                           value={searchTerm}
@@ -196,7 +236,10 @@ export default function InvoiceStatusPage() {
 
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-gray-500">Filtrar por estado:</p>
-                  <Select value={selectedStatus || "all"} onValueChange={(value) => setSelectedStatus(value || null)}>
+                  <Select
+                    value={selectedStatus || "all"}
+                    onValueChange={(value) => setSelectedStatus(value || null)}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Todos los estados" />
                     </SelectTrigger>
@@ -215,7 +258,8 @@ export default function InvoiceStatusPage() {
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      No se encontraron facturas con los criterios de búsqueda especificados.
+                      No se encontraron facturas con los criterios de búsqueda
+                      especificados.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -268,25 +312,40 @@ export default function InvoiceStatusPage() {
                             </div>
                             <div className="text-xs text-gray-500">
                               Pagado:{" "}
-                              {factura.montoPagado.toLocaleString("es-DO", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {(factura.montoPagado ?? 0).toLocaleString(
+                                "es-DO",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={getStatusBadgeStyles(factura.estado)}>
+                            <Badge
+                              variant="outline"
+                              className={getStatusBadgeStyles(factura.estado)}
+                            >
                               {formatStatus(factura.estado)}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Progress
-                                value={calculatePaymentPercentage(factura.montoPagado, factura.montoTotal)}
+                                value={calculatePaymentPercentage(
+                                  factura.montoPagado,
+                                  factura.montoTotal
+                                )}
                                 className="h-2 w-[100px]"
                               />
                               <span className="text-xs">
-                                {Math.round(calculatePaymentPercentage(factura.montoPagado, factura.montoTotal))}%
+                                {Math.round(
+                                  calculatePaymentPercentage(
+                                    factura.montoPagado,
+                                    factura.montoTotal
+                                  )
+                                )}
+                                %
                               </span>
                             </div>
                           </TableCell>
@@ -298,7 +357,10 @@ export default function InvoiceStatusPage() {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   {hasSearched ? (
-                    <p>No se encontraron facturas con los criterios especificados.</p>
+                    <p>
+                      No se encontraron facturas con los criterios
+                      especificados.
+                    </p>
                   ) : (
                     <p>Realice una búsqueda para ver resultados.</p>
                   )}
@@ -309,5 +371,5 @@ export default function InvoiceStatusPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

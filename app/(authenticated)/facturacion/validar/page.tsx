@@ -1,14 +1,28 @@
-"use client"
+"use client";
 
-import { Label } from "@/components/ui/label"
+import { Label } from "@/components/ui/label";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   CheckCircle,
@@ -20,9 +34,9 @@ import {
   Building,
   Loader2,
   ChevronRight,
-} from "lucide-react"
-import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
+} from "lucide-react";
+import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -30,147 +44,164 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
-import { DbService } from "@/lib/db-service"
-import type { Factura, Autorizacion, Afiliado } from "@/lib/types"
-import { updateFacturaStatus } from "../actions"
-import { useRouter } from "next/navigation"
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { DbService } from "@/lib/db-service";
+import type { Factura, Autorizacion, Afiliado } from "@/lib/types";
+import { updateFacturaStatus } from "../actions";
+import { useRouter } from "next/navigation";
 
 export default function ValidarFacturasPage() {
-  const { toast } = useToast()
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [facturasPendientes, setFacturasPendientes] = useState<Factura[]>([])
-  const [facturaSeleccionada, setFacturaSeleccionada] = useState<Factura | null>(null)
-  const [autorizacion, setAutorizacion] = useState<Autorizacion | null>(null)
-  const [afiliado, setAfiliado] = useState<Afiliado | null>(null)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [confirmAction, setConfirmAction] = useState<"aprobar" | "rechazar" | null>(null)
-  const [comentarios, setComentarios] = useState("")
-  const [actionLoading, setActionLoading] = useState(false)
+  const { toast } = useToast();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [facturasPendientes, setFacturasPendientes] = useState<Factura[]>([]);
+  const [facturaSeleccionada, setFacturaSeleccionada] =
+    useState<Factura | null>(null);
+  const [autorizacion, setAutorizacion] = useState<Autorizacion | null>(null);
+  const [afiliado, setAfiliado] = useState<Afiliado | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "aprobar" | "rechazar" | null
+  >(null);
+  const [comentarios, setComentarios] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Cargar facturas pendientes al montar el componente
   useEffect(() => {
     const cargarFacturasPendientes = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const dbService = DbService.getInstance()
-        const facturas = await dbService.getFacturas()
-        // Filtrar facturas pendientes o en revisión
-        const pendientes = facturas.filter((f) => f.estado === "pendiente" || f.estado === "en_revision")
-        setFacturasPendientes(pendientes)
+        const res = await fetch("/api/facturas");
+        const facturas = await res.json();
 
-        // Seleccionar la primera factura automáticamente si hay alguna
+        const pendientes = facturas.filter(
+          (f) => f.estado === "pendiente" || f.estado === "en_revision"
+        );
+        setFacturasPendientes(pendientes);
         if (pendientes.length > 0) {
-          setFacturaSeleccionada(pendientes[0])
+          setFacturaSeleccionada(pendientes[0]);
         }
       } catch (error) {
-        console.error("Error al cargar facturas:", error)
+        console.error("Error al cargar facturas:", error);
         toast({
           title: "Error",
           description: "No se pudieron cargar las facturas pendientes",
           variant: "destructive",
-        })
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    cargarFacturasPendientes()
-  }, [toast])
+    cargarFacturasPendientes();
+  }, [toast]);
 
   // Cargar detalles de la autorización y afiliado cuando se selecciona una factura
   useEffect(() => {
     const cargarDetalles = async () => {
       if (facturaSeleccionada) {
         try {
-          const dbService = DbService.getInstance()
+          // Obtener autorización
+          const resAut = await fetch(
+            `/api/autorizaciones/${facturaSeleccionada.autorizacionId}`
+          );
+          const autorizacionData: Autorizacion = await resAut.json();
+          setAutorizacion(autorizacionData);
 
-          // Cargar autorización
-          const autorizacionData = await dbService.getAutorizacionById(facturaSeleccionada.autorizacionId)
-          setAutorizacion(autorizacionData)
-
-          // Cargar afiliado si se encontró la autorización
-          if (autorizacionData) {
-            const afiliadoData = await dbService.getAfiliadoById(autorizacionData.afiliadoId)
-            setAfiliado(afiliadoData)
+          // Obtener afiliado si hay autorización
+          if (autorizacionData?.afiliadoId) {
+            const resAfi = await fetch(
+              `/api/afiliados/${autorizacionData.afiliadoId}`
+            );
+            const afiliadoData: Afiliado = await resAfi.json();
+            setAfiliado(afiliadoData);
           }
         } catch (error) {
-          console.error("Error al cargar detalles:", error)
+          console.error("Error al cargar detalles:", error);
         }
       } else {
-        setAutorizacion(null)
-        setAfiliado(null)
+        setAutorizacion(null);
+        setAfiliado(null);
       }
-    }
+    };
 
-    cargarDetalles()
-  }, [facturaSeleccionada])
+    cargarDetalles();
+  }, [facturaSeleccionada]);
 
   const handleSelectFactura = (factura: Factura) => {
-    setFacturaSeleccionada(factura)
-    setComentarios("")
-  }
+    setFacturaSeleccionada(factura);
+    setComentarios("");
+  };
 
   const confirmarAccion = (accion: "aprobar" | "rechazar") => {
-    setConfirmAction(accion)
-    setShowConfirmDialog(true)
-  }
+    setConfirmAction(accion);
+    setShowConfirmDialog(true);
+  };
 
   const ejecutarAccion = async () => {
-    if (!facturaSeleccionada || !confirmAction) return
+    if (!facturaSeleccionada || !confirmAction) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
 
-    const formData = new FormData()
-    formData.append("facturaId", facturaSeleccionada.id)
-    formData.append("estado", confirmAction === "aprobar" ? "pagada" : "rechazada")
-    formData.append("comentarios", comentarios)
+    const formData = new FormData();
+    formData.append("facturaId", facturaSeleccionada.id);
+    formData.append(
+      "estado",
+      confirmAction === "aprobar" ? "pagada" : "rechazada"
+    );
+    formData.append("comentarios", comentarios);
 
     try {
-      const result = await updateFacturaStatus(formData)
+      const result = await updateFacturaStatus(formData);
 
       if (result.success) {
         toast({
-          title: `Factura ${confirmAction === "aprobar" ? "aprobada" : "rechazada"}`,
+          title: `Factura ${
+            confirmAction === "aprobar" ? "aprobada" : "rechazada"
+          }`,
           description: result.message,
-        })
+        });
 
         // Actualizar la lista de facturas pendientes
-        setFacturasPendientes((prevFacturas) => prevFacturas.filter((f) => f.id !== facturaSeleccionada.id))
+        setFacturasPendientes((prevFacturas) =>
+          prevFacturas.filter((f) => f.id !== facturaSeleccionada.id)
+        );
 
         // Seleccionar la siguiente factura si hay alguna
         if (facturasPendientes.length > 1) {
-          const currentIndex = facturasPendientes.findIndex((f) => f.id === facturaSeleccionada.id)
-          const nextIndex = currentIndex < facturasPendientes.length - 1 ? currentIndex + 1 : 0
-          setFacturaSeleccionada(facturasPendientes[nextIndex])
+          const currentIndex = facturasPendientes.findIndex(
+            (f) => f.id === facturaSeleccionada.id
+          );
+          const nextIndex =
+            currentIndex < facturasPendientes.length - 1 ? currentIndex + 1 : 0;
+          setFacturaSeleccionada(facturasPendientes[nextIndex]);
         } else {
-          setFacturaSeleccionada(null)
+          setFacturaSeleccionada(null);
         }
 
-        setComentarios("")
-        router.refresh()
+        setComentarios("");
+        router.refresh();
       } else {
         toast({
           title: "Error",
           description: result.message,
           variant: "destructive",
-        })
+        });
       }
     } catch (error) {
-      console.error("Error al actualizar factura:", error)
+      console.error("Error al actualizar factura:", error);
       toast({
         title: "Error",
         description: "Ocurrió un error al procesar la solicitud",
         variant: "destructive",
-      })
+      });
     } finally {
-      setActionLoading(false)
-      setShowConfirmDialog(false)
+      setActionLoading(false);
+      setShowConfirmDialog(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -207,7 +238,9 @@ export default function ValidarFacturasPage() {
           <Card>
             <CardHeader>
               <CardTitle>Facturas Pendientes</CardTitle>
-              <CardDescription>Facturas que requieren validación ({facturasPendientes.length})</CardDescription>
+              <CardDescription>
+                Facturas que requieren validación ({facturasPendientes.length})
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -226,10 +259,16 @@ export default function ValidarFacturasPage() {
                       {facturasPendientes.map((factura) => (
                         <TableRow
                           key={factura.id}
-                          className={facturaSeleccionada?.id === factura.id ? "bg-muted" : ""}
+                          className={
+                            facturaSeleccionada?.id === factura.id
+                              ? "bg-muted"
+                              : ""
+                          }
                           onClick={() => handleSelectFactura(factura)}
                         >
-                          <TableCell className="font-medium">{factura.numeroFactura}</TableCell>
+                          <TableCell className="font-medium">
+                            {factura.numeroFactura}
+                          </TableCell>
                           <TableCell>{factura.fechaEmision}</TableCell>
                           <TableCell>
                             RD${" "}
@@ -247,11 +286,17 @@ export default function ValidarFacturasPage() {
                                   : "border-purple-500 text-purple-600 bg-purple-50"
                               }
                             >
-                              {factura.estado === "pendiente" ? "Pendiente" : "En Revisión"}
+                              {factura.estado === "pendiente"
+                                ? "Pendiente"
+                                : "En Revisión"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" onClick={() => handleSelectFactura(factura)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSelectFactura(factura)}
+                            >
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -272,7 +317,9 @@ export default function ValidarFacturasPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle>Detalles de la Factura</CardTitle>
-                        <CardDescription>Factura {facturaSeleccionada.numeroFactura}</CardDescription>
+                        <CardDescription>
+                          Factura {facturaSeleccionada.numeroFactura}
+                        </CardDescription>
                       </div>
                       <Badge
                         variant="outline"
@@ -282,7 +329,9 @@ export default function ValidarFacturasPage() {
                             : "border-purple-500 text-purple-600 bg-purple-50"
                         }
                       >
-                        {facturaSeleccionada.estado === "pendiente" ? "Pendiente" : "En Revisión"}
+                        {facturaSeleccionada.estado === "pendiente"
+                          ? "Pendiente"
+                          : "En Revisión"}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -290,7 +339,9 @@ export default function ValidarFacturasPage() {
                     <Tabs defaultValue="factura">
                       <TabsList className="grid grid-cols-2 mb-4">
                         <TabsTrigger value="factura">Factura</TabsTrigger>
-                        <TabsTrigger value="autorizacion">Autorización</TabsTrigger>
+                        <TabsTrigger value="autorizacion">
+                          Autorización
+                        </TabsTrigger>
                       </TabsList>
 
                       <TabsContent value="factura" className="space-y-4">
@@ -298,7 +349,9 @@ export default function ValidarFacturasPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-gray-500" />
-                              <p className="text-sm font-medium text-gray-500">Número de Factura</p>
+                              <p className="text-sm font-medium text-gray-500">
+                                Número de Factura
+                              </p>
                             </div>
                             <p>{facturaSeleccionada.numeroFactura}</p>
                           </div>
@@ -306,7 +359,9 @@ export default function ValidarFacturasPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-gray-500" />
-                              <p className="text-sm font-medium text-gray-500">Fecha de Emisión</p>
+                              <p className="text-sm font-medium text-gray-500">
+                                Fecha de Emisión
+                              </p>
                             </div>
                             <p>{facturaSeleccionada.fechaEmision}</p>
                           </div>
@@ -314,7 +369,9 @@ export default function ValidarFacturasPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-gray-500" />
-                              <p className="text-sm font-medium text-gray-500">Fecha de Recepción</p>
+                              <p className="text-sm font-medium text-gray-500">
+                                Fecha de Recepción
+                              </p>
                             </div>
                             <p>{facturaSeleccionada.fechaRecepcion}</p>
                           </div>
@@ -322,21 +379,28 @@ export default function ValidarFacturasPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-gray-500" />
-                              <p className="text-sm font-medium text-gray-500">Monto Total</p>
+                              <p className="text-sm font-medium text-gray-500">
+                                Monto Total
+                              </p>
                             </div>
                             <p className="font-bold">
                               RD${" "}
-                              {facturaSeleccionada.montoTotal.toLocaleString("es-DO", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {facturaSeleccionada.montoTotal.toLocaleString(
+                                "es-DO",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )}
                             </p>
                           </div>
 
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Building className="h-4 w-4 text-gray-500" />
-                              <p className="text-sm font-medium text-gray-500">Prestador</p>
+                              <p className="text-sm font-medium text-gray-500">
+                                Prestador
+                              </p>
                             </div>
                             <p>{facturaSeleccionada.prestadorId}</p>
                           </div>
@@ -344,13 +408,19 @@ export default function ValidarFacturasPage() {
 
                         {facturaSeleccionada.comentarios && (
                           <div className="mt-4">
-                            <p className="text-sm font-medium text-gray-500 mb-1">Comentarios</p>
-                            <p className="text-sm">{facturaSeleccionada.comentarios}</p>
+                            <p className="text-sm font-medium text-gray-500 mb-1">
+                              Comentarios
+                            </p>
+                            <p className="text-sm">
+                              {facturaSeleccionada.comentarios}
+                            </p>
                           </div>
                         )}
 
                         <div className="mt-4">
-                          <p className="text-sm font-medium text-gray-500 mb-1">Documentos Adjuntos</p>
+                          <p className="text-sm font-medium text-gray-500 mb-1">
+                            Documentos Adjuntos
+                          </p>
                           <div className="rounded-md border p-3 text-center">
                             <p className="text-sm text-gray-500">
                               {facturaSeleccionada.documentos?.facturaEscaneada
@@ -366,10 +436,17 @@ export default function ValidarFacturasPage() {
                           <>
                             <div className="flex justify-between items-start">
                               <div>
-                                <h3 className="font-medium">{autorizacion.numeroAutorizacion}</h3>
-                                <p className="text-sm text-gray-500">Servicio: {autorizacion.tipoServicio}</p>
+                                <h3 className="font-medium">
+                                  {autorizacion.numeroAutorizacion}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  Servicio: {autorizacion.tipoServicio}
+                                </p>
                               </div>
-                              <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50">
+                              <Badge
+                                variant="outline"
+                                className="border-green-500 text-green-600 bg-green-50"
+                              >
                                 Aprobada
                               </Badge>
                             </div>
@@ -378,26 +455,40 @@ export default function ValidarFacturasPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-500">Médico Tratante</p>
-                                <p>{autorizacion.medicoTratante || "No especificado"}</p>
+                                <p className="text-sm font-medium text-gray-500">
+                                  Médico Tratante
+                                </p>
+                                <p>
+                                  {autorizacion.medicoTratante ||
+                                    "No especificado"}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-500">Fecha de Servicio</p>
+                                <p className="text-sm font-medium text-gray-500">
+                                  Fecha de Servicio
+                                </p>
                                 <p>{autorizacion.fechaServicio}</p>
                               </div>
 
                               <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-500">Monto Estimado</p>
+                                <p className="text-sm font-medium text-gray-500">
+                                  Monto Estimado
+                                </p>
                                 <p>
                                   RD${" "}
-                                  {autorizacion.montoEstimado.toLocaleString("es-DO", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
+                                  {autorizacion.montoEstimado.toLocaleString(
+                                    "es-DO",
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
                                 </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-500">Cobertura</p>
+                                <p className="text-sm font-medium text-gray-500">
+                                  Cobertura
+                                </p>
                                 <p>{autorizacion.porcentajeCobertura}%</p>
                               </div>
                             </div>
@@ -408,19 +499,27 @@ export default function ValidarFacturasPage() {
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-gray-500" />
-                                  <p className="text-sm font-medium text-gray-500">Afiliado</p>
+                                  <p className="text-sm font-medium text-gray-500">
+                                    Afiliado
+                                  </p>
                                 </div>
                                 <p>
                                   {afiliado.nombres} {afiliado.apellidos}
                                 </p>
-                                <p className="text-sm text-gray-500">NSS: {afiliado.nss}</p>
-                                <p className="text-sm text-gray-500">Cédula: {afiliado.cedula}</p>
+                                <p className="text-sm text-gray-500">
+                                  NSS: {afiliado.nss}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Cédula: {afiliado.cedula}
+                                </p>
                               </div>
                             )}
                           </>
                         ) : (
                           <div className="text-center py-8">
-                            <p className="text-gray-500">No se encontró la información de la autorización</p>
+                            <p className="text-gray-500">
+                              No se encontró la información de la autorización
+                            </p>
                           </div>
                         )}
                       </TabsContent>
@@ -431,7 +530,9 @@ export default function ValidarFacturasPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Validación de Factura</CardTitle>
-                    <CardDescription>Revise la información y apruebe o rechace la factura</CardDescription>
+                    <CardDescription>
+                      Revise la información y apruebe o rechace la factura
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -447,11 +548,17 @@ export default function ValidarFacturasPage() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-between">
-                    <Button variant="destructive" onClick={() => confirmarAccion("rechazar")}>
+                    <Button
+                      variant="destructive"
+                      onClick={() => confirmarAccion("rechazar")}
+                    >
                       <XCircle className="mr-2 h-4 w-4" />
                       Rechazar
                     </Button>
-                    <Button className="bg-green-600 hover:bg-green-700" onClick={() => confirmarAccion("aprobar")}>
+                    <Button
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => confirmarAccion("aprobar")}
+                    >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Aprobar
                     </Button>
@@ -462,7 +569,9 @@ export default function ValidarFacturasPage() {
               <Card>
                 <CardContent className="flex items-center justify-center py-8">
                   <div className="text-center">
-                    <p className="text-gray-500 mb-4">Seleccione una factura para revisar</p>
+                    <p className="text-gray-500 mb-4">
+                      Seleccione una factura para revisar
+                    </p>
                     <ArrowLeft className="h-8 w-8 text-gray-400 mx-auto animate-pulse" />
                   </div>
                 </CardContent>
@@ -475,7 +584,11 @@ export default function ValidarFacturasPage() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{confirmAction === "aprobar" ? "Confirmar aprobación" : "Confirmar rechazo"}</DialogTitle>
+            <DialogTitle>
+              {confirmAction === "aprobar"
+                ? "Confirmar aprobación"
+                : "Confirmar rechazo"}
+            </DialogTitle>
             <DialogDescription>
               {confirmAction === "aprobar"
                 ? "¿Está seguro que desea aprobar esta factura? Se marcará como pagada."
@@ -483,14 +596,20 @@ export default function ValidarFacturasPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} disabled={actionLoading}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={actionLoading}
+            >
               Cancelar
             </Button>
             <Button
               onClick={ejecutarAccion}
               disabled={actionLoading}
               className={
-                confirmAction === "aprobar" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                confirmAction === "aprobar"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
               }
             >
               {actionLoading ? (
@@ -508,5 +627,5 @@ export default function ValidarFacturasPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
